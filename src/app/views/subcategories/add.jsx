@@ -15,6 +15,9 @@ import {
 import { Span } from "app/components/Typography";
 import { useNavigate } from "react-router-dom";
 import { TextValidator, ValidatorForm } from "react-material-ui-form-validator";
+import CardHeader from "@mui/material/CardHeader";
+import CardMedia from "@mui/material/CardMedia";
+import CardContent from "@mui/material/CardContent";
 
 // STYLED COMPONENTS
 const CardRoot = styled(Card)({
@@ -46,10 +49,20 @@ const filter = createFilterOptions();
 
 export default function Add() {
   const navigate = useNavigate();
+  const defaultImageSrc = "/assets/images/image_placeholder.png";
+
+  const initialFieldValues = {
+    categoryId: 0,
+    name: "",
+    description: "",
+    imageSrc: defaultImageSrc,
+    imageFile: null
+  };
+
   const [categories, setCategories] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState([null]);
-  const [state, setState] = useState({ date: new Date() });
-  const { name, description } = state;
+  const [state, setState] = useState(initialFieldValues);
+  const { categoryId, name, description, imageSrc } = state;
 
   useEffect(() => {
     fetch("http://localhost:5276/SolarB2B/Categories")
@@ -58,7 +71,7 @@ export default function Add() {
       })
       .then((resp) => {
         console.log(resp);
-     
+
         if (resp != null) {
           setCategories(resp);
         }
@@ -85,28 +98,23 @@ export default function Add() {
     navigate("/subcategories");
   }
 
-  const handleSubmit = (event) => {
-    // console.log("submitted");
-    // console.log(event);
-  };
-
   const handlesubmit = (e) => {
     e.preventDefault();
     console.log("selectedCategory" + selectedCategory.id);
     console.log("selectedCategory" + name);
     console.log("selectedCategory" + description);
-    const subcategoryInfo = {
-      categoryID: selectedCategory.id,
-      name: name,
-      description: description,
-      subCategoryIcon:
-        "https://fastly.picsum.photos/id/866/200/300.jpg?hmac=rcadCENKh4rD6MAp6V_ma-AyWv641M4iiOpe1RyFHeI"
-    };
+
+    const formData = new FormData();
+    formData.append("name", state.name);
+    formData.append("description", state.description);
+    formData.append("imageFile", state.imageFile);
+    formData.append("imageSrc", state.imageSrc);
+    formData.append("categoryId", selectedCategory.id);
 
     fetch("http://localhost:5276/SolarB2B/SubCategories", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(subcategoryInfo)
+
+      body: formData
     })
       .then((res) => {
         navigate("/subcategories");
@@ -116,6 +124,32 @@ export default function Add() {
         console.log(err.message);
       });
   };
+
+  const showPreview = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      let imageFile = e.target.files[0];
+      if (imageFile.size > 200 * 1024) {
+        alert("File size must be less than 200 KB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (x) => {
+        setState({
+          ...state,
+          imageFile,
+          imageSrc: x.target.result
+        });
+      };
+      reader.readAsDataURL(imageFile);
+    } else {
+      setState({
+        ...state,
+        imageFile: null,
+        imageSrc: defaultImageSrc
+      });
+    }
+  };
+
   return (
     <Container>
       <Box style={{ marginBottom: "1rem" }}>
@@ -178,6 +212,23 @@ export default function Add() {
 
             <Grid item lg={12} md={12} sm={12} xs={12} sx={{ mt: 1 }}>
               <FormControlLabel control={<Checkbox />} label="Is Soft Deleted" />
+            </Grid>
+
+            <Grid item lg={5} md={3} sm={12} xs={12} sx={{ mt: 2 }}>
+              <Card sx={{ maxWidth: 345 }}>
+                <CardHeader subheader="Upload product images" />
+                <CardMedia component="img" height="194" image={imageSrc} alt="Paella dish" />
+
+                <CardContent>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className={"form-control-file"}
+                    id="image-uploader"
+                    onChange={showPreview}
+                  />
+                </CardContent>
+              </Card>
             </Grid>
           </Grid>
 
